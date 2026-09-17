@@ -1,6 +1,5 @@
-// Mode A prints the page in place (marks the target + ancestors with
-// attributes and injects a print stylesheet). Mode B clones the target
-// into a hidden iframe with styles inlined and prints just that.
+// Prints the page in place: marks the target + ancestors with attributes
+// and injects a print stylesheet.
 (function () {
   if (window.__domPdfPrinter) return; // already injected in this page session
 
@@ -13,25 +12,6 @@
   const MARK_CANVAS_IMG = 'data-pick-canvas-replacement';
   const MARK_FOOTER = 'data-pick-footer';
   const MARK_STYLE = 'data-pick-style';
-
-  const PRINT_PROPS = [
-    'display', 'position', 'top', 'left', 'right', 'bottom', 'float', 'clear',
-    'width', 'height', 'max-width', 'max-height', 'min-width', 'min-height',
-    'margin-top', 'margin-right', 'margin-bottom', 'margin-left',
-    'padding-top', 'padding-right', 'padding-bottom', 'padding-left',
-    'border-top-width', 'border-right-width', 'border-bottom-width', 'border-left-width',
-    'border-top-style', 'border-right-style', 'border-bottom-style', 'border-left-style',
-    'border-top-color', 'border-right-color', 'border-bottom-color', 'border-left-color',
-    'border-top-left-radius', 'border-top-right-radius', 'border-bottom-left-radius', 'border-bottom-right-radius',
-    'box-sizing', 'background-color', 'background-image', 'background-repeat', 'background-size', 'background-position',
-    'color', 'font-family', 'font-size', 'font-weight', 'font-style', 'font-variant', 'line-height', 'letter-spacing',
-    'text-align', 'text-decoration-line', 'text-transform', 'white-space', 'word-break', 'overflow-wrap', 'vertical-align',
-    'list-style-type', 'list-style-position',
-    'flex-direction', 'flex-wrap', 'justify-content', 'align-items', 'align-self', 'flex-grow', 'flex-shrink', 'flex-basis',
-    'grid-template-columns', 'grid-template-rows', 'grid-column', 'grid-row', 'gap', 'row-gap', 'column-gap',
-    'table-layout', 'border-collapse', 'border-spacing',
-    'object-fit', 'object-position', 'opacity', 'z-index', 'overflow'
-  ];
 
   let activeState = null;
 
@@ -213,7 +193,7 @@ ${pageRule}
 }`;
   }
 
-  async function printModeA(node, opts) {
+  async function printTarget(node, opts) {
     if (activeState) cleanupActive();
 
     node.scrollIntoView({ block: 'nearest', inline: 'nearest' });
@@ -251,7 +231,7 @@ ${pageRule}
       node.appendChild(footer);
     }
 
-    const state = { mode: 'A', node, ancestors, extraHidden, fixedEls, scrollEls, canvasRestores, styleEls, footer };
+    const state = { node, ancestors, extraHidden, fixedEls, scrollEls, canvasRestores, styleEls, footer };
     activeState = state;
 
     const onAfterPrint = () => {
@@ -273,159 +253,24 @@ ${pageRule}
     activeState = null;
     if (!state) return;
 
-    if (state.mode === 'A') {
-      state.styleEls.forEach((el) => el.remove());
-      state.node.removeAttribute(MARK_TARGET);
-      state.ancestors.forEach((el) => el.removeAttribute(MARK_ANCESTOR));
-      state.extraHidden.forEach((el) => el.removeAttribute(MARK_HIDE));
-      state.fixedEls.forEach((el) => el.removeAttribute(MARK_FIXED));
-      state.scrollEls.forEach((el) => el.removeAttribute(MARK_SCROLL));
-      restoreCanvasesLive(state.canvasRestores);
-      if (state.footer) state.footer.remove();
-    } else if (state.mode === 'B') {
-      state.iframe.remove();
-    }
+    state.styleEls.forEach((el) => el.remove());
+    state.node.removeAttribute(MARK_TARGET);
+    state.ancestors.forEach((el) => el.removeAttribute(MARK_ANCESTOR));
+    state.extraHidden.forEach((el) => el.removeAttribute(MARK_HIDE));
+    state.fixedEls.forEach((el) => el.removeAttribute(MARK_FIXED));
+    state.scrollEls.forEach((el) => el.removeAttribute(MARK_SCROLL));
+    restoreCanvasesLive(state.canvasRestores);
+    if (state.footer) state.footer.remove();
   }
 
   function nextPaint() {
     return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
   }
 
-  function applyPrintStyles(src, dst) {
-    const cs = getComputedStyle(src);
-    for (const prop of PRINT_PROPS) {
-      const val = cs.getPropertyValue(prop);
-      if (val) {
-        try { dst.style.setProperty(prop, val); } catch (_) { /* unsupported property */ }
-      }
-    }
-    if (cs.position === 'fixed' || cs.position === 'sticky') {
-      dst.style.setProperty('position', 'static');
-      dst.style.setProperty('top', 'auto');
-      dst.style.setProperty('left', 'auto');
-    }
-    if (isScrollableEl(src, cs)) {
-      dst.style.setProperty('overflow', 'visible');
-      dst.style.setProperty('height', 'auto');
-      dst.style.setProperty('max-height', 'none');
-    }
-  }
-
-  function absoluteUrl(url) {
-    try { return new URL(url, location.href).href; } catch (_) { return url; }
-  }
-
-  function cloneComposed(node, doc) {
-    if (node.nodeType === Node.TEXT_NODE) return doc.createTextNode(node.textContent);
-    if (node.nodeType !== Node.ELEMENT_NODE) return null;
-
-    const tag = node.tagName.toLowerCase();
-
-    if (tag === 'iframe') {
-      const placeholder = doc.createElement('div');
-      placeholder.textContent = '[nested <iframe> skipped]';
-      placeholder.style.cssText = 'border:1px dashed #999;padding:6px;font-size:11px;color:#888;';
-      return placeholder;
-    }
-
-    if (tag === 'script' || tag === 'style' || tag === 'noscript' || tag === 'link') {
-      return null; // not relevant for printing, and link/script could attempt network access
-    }
-
-    if (tag === 'canvas') {
-      let dataUrl = null;
-      try { dataUrl = node.toDataURL('image/png'); } catch (_) { /* tainted canvas */ }
-      if (dataUrl) {
-        const img = doc.createElement('img');
-        img.src = dataUrl;
-        if (node.style.width) img.style.width = node.style.width; else img.style.width = node.width + 'px';
-        if (node.style.height) img.style.height = node.style.height; else img.style.height = node.height + 'px';
-        return img;
-      }
-    }
-
-    const clone = doc.createElement(tag);
-
-    if (tag === 'img') {
-      const src = node.currentSrc || node.src;
-      if (src) clone.setAttribute('src', absoluteUrl(src));
-      const alt = node.getAttribute('alt');
-      if (alt) clone.setAttribute('alt', alt);
-    } else if (tag === 'a') {
-      const href = node.getAttribute('href');
-      if (href) clone.setAttribute('href', absoluteUrl(href));
-    }
-
-    applyPrintStyles(node, clone);
-
-    const childRoot = node.shadowRoot ? node.shadowRoot : node;
-    for (const child of childRoot.childNodes) {
-      const c = cloneComposed(child, doc);
-      if (c) clone.appendChild(c);
-    }
-    return clone;
-  }
-
-  async function printModeB(node, opts) {
-    if (activeState) cleanupActive();
-
-    node.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-    const { images } = scanSubtree(node);
-    await waitForImages(images);
-
-    const iframe = document.createElement('iframe');
-    iframe.setAttribute('data-pick-frame', '1');
-    iframe.style.cssText = 'position:fixed; top:0; left:-99999px; width:1px; height:1px; border:0; visibility:hidden;';
-    document.body.appendChild(iframe);
-
-    const idoc = iframe.contentDocument;
-    idoc.open();
-    idoc.write('<!doctype html><html><head><meta charset="utf-8"><title>Print</title></head><body></body></html>');
-    idoc.close();
-
-    const clone = cloneComposed(node, idoc);
-    idoc.body.appendChild(clone);
-
-    const pageRule = buildPageRule(opts, node);
-    const style = idoc.createElement('style');
-    style.textContent = `
-      ${pageRule}
-      html, body { margin: 0; padding: 0; background: #fff; }
-      body { -webkit-print-color-adjust: ${opts.printBackgrounds ? 'exact' : 'economy'}; print-color-adjust: ${opts.printBackgrounds ? 'exact' : 'economy'}; }
-      img { max-width: 100%; }
-    `;
-    idoc.head.appendChild(style);
-
-    if (opts.includeSourceUrl) {
-      const footer = idoc.createElement('div');
-      footer.style.cssText = 'margin-top:8px; font-size:10px; color:#666;';
-      footer.textContent = location.href;
-      idoc.body.appendChild(footer);
-    }
-
-    const state = { mode: 'B', iframe };
-    activeState = state;
-
-    const iwin = iframe.contentWindow;
-    const onAfterPrint = () => {
-      iwin.removeEventListener('afterprint', onAfterPrint);
-      if (activeState === state) cleanupActive();
-    };
-    iwin.addEventListener('afterprint', onAfterPrint);
-
-    await nextPaint();
-    iwin.focus();
-    iwin.print();
-    setTimeout(() => {
-      if (activeState === state) cleanupActive();
-    }, 60000);
-  }
-
   window.__domPdfPrinter = {
     async print(node, opts) {
-      const options = Object.assign({ marginMm: 12, mode: 'A', printBackgrounds: true, includeSourceUrl: false, longPage: true }, opts || {});
-      if (options.mode === 'B') return printModeB(node, options);
-      return printModeA(node, options);
+      const options = Object.assign({ marginMm: 12, printBackgrounds: true, includeSourceUrl: false, longPage: true }, opts || {});
+      return printTarget(node, options);
     },
     cancel() {
       if (activeState) cleanupActive();

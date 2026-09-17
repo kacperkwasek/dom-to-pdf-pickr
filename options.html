@@ -20,7 +20,6 @@
   label.row { display: flex; align-items: center; gap: 8px; margin: 8px 0; cursor: pointer; }
   label.row input[type="number"] { width: 80px; }
   .help { color: #6b7280; font-size: 12px; margin: 2px 0 10px 24px; }
-  .mode-options { display: flex; gap: 16px; flex-wrap: wrap; }
   button#save {
     background: #2563eb; color: #fff; border: 0; border-radius: 6px;
     padding: 8px 18px; font-size: 14px; cursor: pointer;
@@ -38,23 +37,7 @@
     <label class="row">
       Margin <input type="number" id="marginMm" min="0" max="50" step="1"> mm
     </label>
-    <div class="help">Used in the @page rule for both print modes.</div>
-  </fieldset>
-
-  <fieldset>
-    <legend>Print mode</legend>
-    <div class="mode-options">
-      <label class="row"><input type="radio" name="mode" value="A"> Mode A - in-place (default)</label>
-      <label class="row"><input type="radio" name="mode" value="B"> Mode B - isolated (fallback)</label>
-    </div>
-    <div class="help">
-      Mode A marks the selected element and its ancestors with attributes,
-      injects a <code>@media print</code> stylesheet and prints the current
-      page. Mode B deep-clones the element into a hidden frame with computed
-      styles rewritten inline, then prints only that frame - useful when a
-      page has aggressive CSS that is hard to override. You can also switch
-      mode for a single pick with the <b>M</b> key on the picker badge.
-    </div>
+    <div class="help">Used in the @page rule.</div>
   </fieldset>
 
   <fieldset>
