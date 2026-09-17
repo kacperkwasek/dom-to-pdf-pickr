@@ -17,9 +17,12 @@
     }
   },
   "background": {
-    "service_worker": "background.js"
+    "scripts": ["background.js"]
   },
-  "options_page": "options.html",
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
   "permissions": ["activeTab", "scripting", "commands", "storage", "contextMenus"],
   "commands": {
     "toggle-picker": {
@@ -27,6 +30,12 @@
         "default": "Alt+Shift+P"
       },
       "description": "Toggle element picker (long page)"
+    }
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "dom-to-pdf-picker@local.extension",
+      "strict_min_version": "115.0"
     }
   }
 }

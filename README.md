@@ -1,8 +1,13 @@
-# DOM to PDF Picker
+# DOM to PDF Picker (Firefox build)
 
-Browser extension (Chrome + Firefox, Manifest V3) that lets you pick any
-element on a page and save it as a PDF with real, selectable text and
-images. No rasterization.
+Browser extension (Manifest V3, Firefox) that lets you pick any element on
+a page and save it as a PDF with real, selectable text and images. No
+rasterization.
+
+This is the Firefox branch - `manifest.json` here uses
+`background.scripts` plus `browser_specific_settings.gecko.id`. There's a
+separate `chromium` branch with the `background.service_worker` variant;
+the rest of the code is identical between the two.
 
 No dependencies, no build step, plain JS. Printing goes through the
 browser's native `window.print()` with an injected `@media print`
@@ -10,9 +15,7 @@ stylesheet - it's not html2canvas, jsPDF, html2pdf or anything like that.
 
 ## Files
 
-- `manifest.chrome.json` / `manifest.firefox.json` - MV3 manifests. Chrome
-  wants `background.service_worker`, Firefox wants `background.scripts`
-  plus a `browser_specific_settings.gecko.id`. Everything else is shared.
+- `manifest.json` - MV3 manifest for Firefox.
 - `background.js` - icon click, context menu, keyboard shortcut. Injects
   `printer.js` and `picker.js`.
 - `picker.js` - the hover/highlight overlay and keyboard navigation.
@@ -21,33 +24,15 @@ stylesheet - it's not html2canvas, jsPDF, html2pdf or anything like that.
 - `options.html` / `options.js` - settings page.
 - `icons/` - 16/48/128 PNG + source SVG.
 
-Both manifests point at the same JS files, so `const api = globalThis.browser ?? chrome;` shows up at the top of every script.
-
 Permissions: `activeTab`, `scripting`, `commands`, `storage`, `contextMenus`.
 No host permissions, no network calls.
 
 ## Installing it
 
-Chrome and Firefox both require the manifest to be literally named
-`manifest.json`, so copy the right one first:
-
-**Chrome / Edge / Brave**
-```
-cp manifest.chrome.json manifest.json
-```
-Then `chrome://extensions` -> enable Developer mode -> Load unpacked ->
-pick this folder.
-
-**Firefox**
-```
-cp manifest.firefox.json manifest.json
-```
-Then `about:debugging#/runtime/this-firefox` -> Load Temporary Add-on ->
-pick `manifest.json`. It unloads when Firefox restarts since it's not
-signed - that's normal for this kind of temporary install.
-
-If you want both loaded at once, just copy the whole folder twice and put
-a different manifest in each copy.
+Open `about:debugging#/runtime/this-firefox`, click Load Temporary Add-on
+and pick `manifest.json` in this folder. It unloads when Firefox restarts
+since it's not signed - that's normal for a temporary install. Permanent
+installation needs signing through addons.mozilla.org.
 
 ## Using it
 
