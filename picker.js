@@ -9,12 +9,11 @@
     return;
   }
 
-  const DEFAULT_OPTIONS = { marginMm: 12, mode: 'A', printBackgrounds: true, includeSourceUrl: false };
+  const DEFAULT_OPTIONS = { marginMm: 12, printBackgrounds: true, includeSourceUrl: false };
 
   const STATE = {
     active: false,
     target: null,
-    mode: 'A',
     options: DEFAULT_OPTIONS,
     hoverBlocked: false
   };
@@ -76,7 +75,7 @@
       </style>
       <div class="box"></div>
       <div class="badge"></div>
-      <div class="hint">↑ parent&nbsp;&nbsp;↓ child&nbsp;&nbsp;← → sibling&nbsp;&nbsp;M mode A/B&nbsp;&nbsp;Enter/click print&nbsp;&nbsp;Esc cancel</div>
+      <div class="hint">↑ parent&nbsp;&nbsp;↓ child&nbsp;&nbsp;← → sibling&nbsp;&nbsp;Enter/click print&nbsp;&nbsp;Esc cancel</div>
     `;
     document.documentElement.appendChild(host);
     return { host, box: shadow.querySelector('.box'), badge: shadow.querySelector('.badge') };
@@ -97,7 +96,7 @@
       const selector = shortSelector(STATE.target);
       const w = Math.round(rect.width);
       const h = Math.round(rect.height);
-      overlay.badge.innerHTML = `<b>${escapeHtml(selector)}</b> &nbsp;${w}×${h}px&nbsp; · Mode: ${STATE.mode}`;
+      overlay.badge.innerHTML = `<b>${escapeHtml(selector)}</b> &nbsp;${w}×${h}px`;
     }
 
     const badgeTop = rect.top > 28 ? rect.top - 26 : rect.bottom + 6;
@@ -154,7 +153,7 @@
       return;
     }
     const node = STATE.target;
-    const options = Object.assign({}, STATE.options, { mode: STATE.mode, longPage: true });
+    const options = Object.assign({}, STATE.options, { longPage: true });
     stop();
     try {
       await window.__domPdfPrinter.print(node, options);
@@ -208,13 +207,6 @@
         e.stopPropagation();
         navigate('next');
         break;
-      case 'm':
-      case 'M':
-        e.preventDefault();
-        e.stopPropagation();
-        STATE.mode = STATE.mode === 'B' ? 'A' : 'B';
-        updateHighlight();
-        break;
     }
   }
 
@@ -250,7 +242,6 @@
     if (token !== startToken) return; // stop()/another start() happened meanwhile
 
     STATE.options = options;
-    STATE.mode = STATE.options.mode || 'A';
     STATE.hoverBlocked = false;
     STATE.target = document.body;
 
