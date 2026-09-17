@@ -1,13 +1,6 @@
-// DOM to PDF Picker - picker.js
-// Element-picking overlay: hover, keyboard DOM navigation, a badge showing
-// the selector/size, blocking of foreign <iframe>s. Enter/click confirms,
-// Esc cancels and fully cleans up.
-//
-// This file gets re-injected on every Alt+Shift+P / icon click / context
-// menu pick - that's why everything lives in an IIFE, and the toggle
-// function is kept on window so a fresh injection can simply TURN OFF an
-// already-active picker.
-
+// Gets re-injected on every pick, so it's wrapped in an IIFE and the
+// toggle fn lives on window - a fresh injection just flips the existing
+// picker off instead of stacking a second one.
 (function () {
   const api = globalThis.browser ?? chrome;
 

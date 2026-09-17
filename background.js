@@ -1,9 +1,5 @@
-// DOM to PDF Picker - background/service worker
-// Reacts to: the toolbar icon click, the right-click context menu and the
-// keyboard shortcut. All three do exactly the same thing: inject
-// printer.js + picker.js into the active tab and toggle the picker, always
-// producing a single continuous "long page" PDF.
-// No network access, no telemetry, no host_permissions.
+// Toolbar icon, context menu, keyboard shortcut - all three just inject
+// printer.js + picker.js into the tab and toggle the picker.
 
 const api = globalThis.browser ?? chrome;
 
@@ -17,8 +13,7 @@ async function activate(tab) {
   }
 
   try {
-    // Order matters: printer.js defines window.__domPdfPrinter, which
-    // picker.js uses once the user confirms a selection (Enter/click).
+    // printer.js has to load first, picker.js calls into it on confirm
     await api.scripting.executeScript({ target: { tabId: tab.id }, files: ['printer.js'] });
     await api.scripting.executeScript({ target: { tabId: tab.id }, files: ['picker.js'] });
   } catch (err) {
@@ -26,13 +21,9 @@ async function activate(tab) {
   }
 }
 
-// ---------- Toolbar icon ----------
-
 api.action.onClicked.addListener((tab) => {
   activate(tab);
 });
-
-// ---------- Context menu (right mouse button) ----------
 
 async function setupContextMenu() {
   try {
@@ -51,8 +42,6 @@ setupContextMenu();
 api.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === 'dom-pdf-pick') activate(tab);
 });
-
-// ---------- Keyboard shortcut ----------
 
 api.commands.onCommand.addListener(async (command, commandTab) => {
   if (command !== 'toggle-picker') return;
