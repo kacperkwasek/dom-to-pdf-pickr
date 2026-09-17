@@ -1,9 +1,6 @@
-// DOM to PDF Picker - printer.js
-// Builds the print rules, prepares the content (images/canvas/scroll/fixed),
-// triggers the native window.print() and cleans up after afterprint.
-// Mode A: in-place printing (attribute marking + <style media="print">).
-// Mode B: isolated clone in a hidden frame with inlined styles.
-
+// Mode A prints the page in place (marks the target + ancestors with
+// attributes and injects a print stylesheet). Mode B clones the target
+// into a hidden iframe with styles inlined and prints just that.
 (function () {
   if (window.__domPdfPrinter) return; // already injected in this page session
 
@@ -38,8 +35,6 @@
 
   let activeState = null;
 
-  // ---------- Page size: standard vs "one long page" ----------
-
   const MM_PER_PX = 25.4 / 96; // 1 CSS px = 1/96 inch, independent of actual screen DPI
   const LONG_PAGE_WIDTH_MM = 210; // fixed "sheet" width (like A4) - only the height varies
   const LONG_PAGE_MAX_HEIGHT_MM = 5000; // ~5 m - a sane upper bound (browsers have their own caps too)
@@ -52,12 +47,6 @@
     return Math.min(LONG_PAGE_MAX_HEIGHT_MM, Math.max(heightMm, marginMm * 2 + 20));
   }
 
-  // Returns the @page rule to use - for standard printing just the margin
-  // (the browser splits the content into A4/Letter/... pages on its own),
-  // and for the "long PDF" variant a custom page size whose height matches
-  // the full height of the selected element - so the whole content fits on
-  // one continuous page instead of being split. Works correctly when the
-  // print destination is set to "Save as PDF".
   function buildPageRule(opts, node) {
     const margin = Number(opts.marginMm);
     const marginMm = Number.isFinite(margin) && margin >= 0 ? margin : 12;
@@ -68,8 +57,6 @@
     return `@page { margin: ${marginMm}mm; }`;
   }
 
-  // ---------- Shared helpers ----------
-
   function isScrollableEl(el, cs) {
     const overflow = cs.overflow || '';
     const overflowY = cs.overflowY || '';
@@ -77,11 +64,9 @@
     return scrolls && el.scrollHeight > el.clientHeight + 1;
   }
 
-  // One pass over the tree (including open Shadow DOM) collecting images,
-  // canvases, elements that need special print handling, and any (open)
-  // ShadowRoots encountered - so we can inject a copy of the print
-  // stylesheet into them too (styles defined in document.head do NOT
-  // pierce into Shadow DOM).
+  // Walks the tree (including open shadow roots) collecting images,
+  // canvases, fixed/scrollable elements and any shadow roots we passed
+  // through, since styles in document.head don't pierce shadow DOM.
   function scanSubtree(root) {
     const images = [];
     const canvases = [];
@@ -112,12 +97,10 @@
     return { images, canvases, fixedEls, scrollEls, shadowRoots };
   }
 
-  // Walks up from node to <html>, crossing Shadow DOM boundaries (when
-  // .parentElement is null but getRootNode() is a ShadowRoot, it continues
-  // from its .host). Also returns the ShadowRoots encountered (to inject
-  // the stylesheet into) and the "orphaned" siblings at the Shadow DOM
-  // boundary that the plain "[data-pick-anc] > *" rule can't reach, because
-  // their parent is the ShadowRoot itself, not a marked element.
+  // Walks up to <html>, crossing shadow boundaries via .getRootNode().host
+  // when parentElement is null. Also returns the shadow roots crossed and
+  // the sibling nodes at each boundary, since those aren't reachable by
+  // the "[data-pick-anc] > *" rule alone.
   function collectAncestorChain(node) {
     const ancestors = [];
     const shadowRoots = [];
@@ -162,8 +145,6 @@
     }));
   }
 
-  // Replaces <canvas> in the LIVE DOM with an <img> (toDataURL) - used in
-  // Mode A, where the original document is printed in-place.
   function replaceCanvasesLive(canvases) {
     const restores = [];
     for (const canvas of canvases) {
@@ -232,8 +213,6 @@ ${pageRule}
 }`;
   }
 
-  // ---------- Mode A: in-place printing ----------
-
   async function printModeA(node, opts) {
     if (activeState) cleanupActive();
 
@@ -251,10 +230,7 @@ ${pageRule}
     extraHidden.forEach((el) => el.setAttribute(MARK_HIDE, '1'));
     node.setAttribute(MARK_TARGET, '1');
 
-    // Styles defined in document.head don't pierce into Shadow DOM, so if
-    // the selection crosses a Shadow DOM boundary (up through ancestors or
-    // down through descendants), we also inject a copy of the same
-    // stylesheet into every (open) ShadowRoot encountered.
+    // needs a copy of the stylesheet in every shadow root we crossed too
     const styleTargets = new Set([document.head, ...ancestorShadowRoots, ...descendantShadowRoots]);
     const cssText = buildPrintCss(opts, node);
     const styleEls = [...styleTargets].map((target) => {
@@ -286,8 +262,7 @@ ${pageRule}
 
     await nextPaint();
     window.print();
-    // Safety net: some browsers may not fire afterprint (e.g. an unusual
-    // way of dismissing the dialog).
+    // fallback in case afterprint never fires
     setTimeout(() => {
       if (activeState === state) cleanupActive();
     }, 60000);
@@ -315,8 +290,6 @@ ${pageRule}
   function nextPaint() {
     return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
   }
-
-  // ---------- Mode B: isolated clone in a hidden frame ----------
 
   function applyPrintStyles(src, dst) {
     const cs = getComputedStyle(src);
@@ -447,8 +420,6 @@ ${pageRule}
       if (activeState === state) cleanupActive();
     }, 60000);
   }
-
-  // ---------- Public API ----------
 
   window.__domPdfPrinter = {
     async print(node, opts) {
