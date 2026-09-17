@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>DOM to PDF Picker - Settings</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    max-width: 560px;
+    margin: 24px auto;
+    padding: 0 16px;
+    color: #111827;
+    background: #fff;
+  }
+  h1 { font-size: 18px; margin-bottom: 4px; }
+  p.lead { color: #6b7280; margin-top: 0; }
+  fieldset { border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px 16px; margin-bottom: 16px; }
+  legend { padding: 0 6px; font-weight: 600; }
+  label.row { display: flex; align-items: center; gap: 8px; margin: 8px 0; cursor: pointer; }
+  label.row input[type="number"] { width: 80px; }
+  .help { color: #6b7280; font-size: 12px; margin: 2px 0 10px 24px; }
+  .mode-options { display: flex; gap: 16px; flex-wrap: wrap; }
+  button#save {
+    background: #2563eb; color: #fff; border: 0; border-radius: 6px;
+    padding: 8px 18px; font-size: 14px; cursor: pointer;
+  }
+  button#save:hover { background: #1d4ed8; }
+  #status { margin-left: 10px; color: #16a34a; font-size: 13px; }
+</style>
+</head>
+<body>
+  <h1>DOM to PDF Picker</h1>
+  <p class="lead">Printing settings for the selected page element. Every printout is a single continuous "long page" PDF - there is no page splitting.</p>
+
+  <fieldset>
+    <legend>Page margins</legend>
+    <label class="row">
+      Margin <input type="number" id="marginMm" min="0" max="50" step="1"> mm
+    </label>
+    <div class="help">Used in the @page rule for both print modes.</div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Print mode</legend>
+    <div class="mode-options">
+      <label class="row"><input type="radio" name="mode" value="A"> Mode A - in-place (default)</label>
+      <label class="row"><input type="radio" name="mode" value="B"> Mode B - isolated (fallback)</label>
+    </div>
+    <div class="help">
+      Mode A marks the selected element and its ancestors with attributes,
+      injects a <code>@media print</code> stylesheet and prints the current
+      page. Mode B deep-clones the element into a hidden frame with computed
+      styles rewritten inline, then prints only that frame - useful when a
+      page has aggressive CSS that is hard to override. You can also switch
+      mode for a single pick with the <b>M</b> key on the picker badge.
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Print content</legend>
+    <label class="row"><input type="checkbox" id="printBackgrounds"> Force background colors/images (print-color-adjust: exact)</label>
+    <div class="help">
+      This sets a CSS property, but background colors/images will only
+      actually appear in the PDF if you also enable
+      <b>"Background graphics"</b> in the browser's native print dialog.
+      See the README.
+    </div>
+    <label class="row"><input type="checkbox" id="includeSourceUrl"> Append the source page URL below the content</label>
+    <div class="help">Adds a small line of text with <code>location.href</code> at the end of the printout.</div>
+  </fieldset>
+
+  <button id="save">Save</button>
+  <span id="status" hidden>Saved.</span>
+
+  <script src="options.js"></script>
+</body>
+</html>
