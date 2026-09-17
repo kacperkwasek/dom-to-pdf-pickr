@@ -13,6 +13,8 @@ No dependencies, no build step, plain JS. Printing goes through the
 browser's native `window.print()` with an injected `@media print`
 stylesheet - it's not html2canvas, jsPDF, html2pdf or anything like that.
 
+![Demo](demo.gif)
+
 ## Files
 
 - `manifest.json` - MV3 manifest for Chromium browsers.
